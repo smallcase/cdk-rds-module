@@ -14,7 +14,7 @@ on:
 jobs:
   validate:
     name: Validate PR title
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     if: (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')

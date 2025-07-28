@@ -29,7 +29,7 @@ const project = new AwsCdkConstructLibrary({
   },
   githubOptions: {
     pullRequestLintOptions: {
-      runsOn: 'arc-runner-set',
+      runsOn: 'ubuntu-latest',
     },
   },
   // publishToPypi: {
