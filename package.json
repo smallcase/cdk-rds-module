@@ -2,7 +2,7 @@
   "name": "@smallcase/cdk-rds-module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bharat.parmar/cdk-rds-module.git"
+    "url": "https://github.com/smallcase/cdk-rds-module"
   },
   "scripts": {
     "build": "npx projen build",
