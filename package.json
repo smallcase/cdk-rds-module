@@ -1,5 +1,5 @@
 {
-  "name": "cdk-rds-module",
+  "name": "@smallcase/cdk-rds-module",
   "repository": {
     "type": "git",
     "url": "https://github.com/bharat.parmar/cdk-rds-module.git"
@@ -39,7 +39,7 @@
     "@types/node": "^24.1.0",
     "@typescript-eslint/eslint-plugin": "^8",
     "@typescript-eslint/parser": "^8",
-    "aws-cdk-lib": "2.1.0",
+    "aws-cdk-lib": "2.169.0",
     "commit-and-tag-version": "^12",
     "constructs": "10.0.5",
     "eslint": "^9",
@@ -58,7 +58,7 @@
     "typescript": "^5.8.3"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.1.0",
+    "aws-cdk-lib": "^2.169.0",
     "constructs": "^10.0.5"
   },
   "keywords": [
