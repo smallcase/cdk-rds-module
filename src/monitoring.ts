@@ -260,7 +260,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-cpu-${thresholds.cpu}-alert`, {
       evaluationPeriods: 2,
-      alarmName: `${this.config.clusterName}${suffix}-cpu-${thresholds.cpu}-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-cpu-${thresholds.cpu}`,
       alarmDescription: description,
       threshold: thresholds.cpu,
     });
@@ -288,7 +288,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-freespace-${freeStorageGB}gb-alert`, {
       evaluationPeriods: 2,
-      alarmName: `${this.config.clusterName}${suffix}-freespace-${freeStorageGB}gb-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-freespace-${freeStorageGB}gb`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
       threshold: thresholds.freeStorage,
@@ -317,7 +317,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-memory-${memoryThresholdGB}gb-alert`, {
       evaluationPeriods: 2,
-      alarmName: `${this.config.clusterName}${suffix}-memory-${memoryThresholdGB}gb-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-memory-${memoryThresholdGB}gb`,
       comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
       alarmDescription: description,
       threshold: thresholds.memory,
@@ -346,7 +346,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-read-iops-${thresholds.readIops}-alert`, {
       evaluationPeriods: isReplica ? 5 : 2,
-      alarmName: `${this.config.clusterName}${suffix}-read-iops-${thresholds.readIops}-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-read-iops-${thresholds.readIops}`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: thresholds.readIops,
@@ -375,7 +375,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-write-iops-${thresholds.writeIops}-alert`, {
       evaluationPeriods: isReplica ? 5 : 2,
-      alarmName: `${this.config.clusterName}${suffix}-write-iops-${thresholds.writeIops}-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-write-iops-${thresholds.writeIops}`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: thresholds.writeIops,
@@ -404,7 +404,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-disk-queue-depth-${thresholds.diskQueueDepth}-alert`, {
       evaluationPeriods: 5,
-      alarmName: `${this.config.clusterName}${suffix}-disk-queue-depth-${thresholds.diskQueueDepth}-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-disk-queue-depth-${thresholds.diskQueueDepth}`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: thresholds.diskQueueDepth,
@@ -433,7 +433,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-db-connections-${thresholds.dbConnections}-alert`, {
       evaluationPeriods: 2,
-      alarmName: `${this.config.clusterName}${suffix}-db-connections-${thresholds.dbConnections}-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-db-connections-${thresholds.dbConnections}`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: thresholds.dbConnections,
@@ -463,7 +463,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-network-throughput-${networkThroughputMB}mb-alert`, {
       evaluationPeriods: 3,
-      alarmName: `${this.config.clusterName}${suffix}-network-throughput-${networkThroughputMB}mb-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-network-throughput-${networkThroughputMB}mb`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: thresholds.networkThroughput,
@@ -493,7 +493,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-replication-lag-${replicationLagSeconds}sec-alert`, {
       evaluationPeriods: 2,
-      alarmName: `${this.config.clusterName}${suffix}-replication-lag-${replicationLagSeconds}sec-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-replication-lag-${replicationLagSeconds}sec`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: thresholds.replicationLag,
@@ -529,7 +529,7 @@ export class RDSMonitoring extends Construct {
 
     const alarm = metric.createAlarm(this.nestedStack, `${this.config.clusterName}${suffix}-backup-storage-${backupThreshold}-alert`, {
       evaluationPeriods: 2,
-      alarmName: `${this.config.clusterName}${suffix}-backup-storage-${backupThreshold}-${this.node.id}`,
+      alarmName: `${this.config.clusterName}${suffix}-backup-storage-${backupThreshold}`,
       alarmDescription: description,
       comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
       threshold: backupThreshold,
