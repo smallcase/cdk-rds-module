@@ -157,7 +157,7 @@ export class PostgresRDSCluster extends Construct {
       allowMajorVersionUpgrade: false,
       autoMinorVersionUpgrade: true,
       backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : Duration.days(0),
-      storageEncrypted: true,
+      storageEncrypted: props.storageEncrypted ?? false,
       databaseName: props.databaseName,
     });
     tags.forEach((v, k) => {
