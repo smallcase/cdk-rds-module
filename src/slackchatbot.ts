@@ -7,10 +7,10 @@ import {
 import { Construct } from 'constructs';
 
 export interface SlackChatbotProps {
-  environmentName: string;
-  slackWorkspaceId: string;
-  slackChannelId: string;
-  notificationTopics: sns.ITopic[];
+  readonly environmentName: string;
+  readonly slackWorkspaceId: string;
+  readonly slackChannelId: string;
+  readonly notificationTopics: sns.ITopic[];
 }
 
 export class SlackChatbotIntegration extends Construct {

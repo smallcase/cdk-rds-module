@@ -1,9 +1,9 @@
 import {
-  aws_iam as iam, aws_ec2 as ec2, aws_sns as sns, aws_cloudwatch_actions as cw_actions,
-  aws_sns_subscriptions as sns_subs, Tags, aws_rds as rds, Duration, RemovalPolicy, CfnOutput, Token,
+  aws_iam as iam, aws_ec2 as ec2, aws_sns as sns,
+  Tags, aws_rds as rds, Duration, RemovalPolicy, CfnOutput,
 } from 'aws-cdk-lib';
-import { ComparisonOperator } from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
+import { AlertThresholds, RDSMonitoring } from './monitoring';
 import { ObjToStrMap } from './utils/common';
 
 export enum ResourceType {
@@ -11,59 +11,61 @@ export enum ResourceType {
   EXISTING,
 }
 
-export interface ingressRule {
-  peer: ec2.IPeer | ec2.ISecurityGroup;
-  connection: ec2.Port;
-  description?: string;
-  remoteRule?: boolean;
+export interface IngressRule {
+  readonly peer: ec2.IPeer | ec2.ISecurityGroup;
+  readonly connection: ec2.Port;
+  readonly description?: string;
+  readonly remoteRule?: boolean;
 }
 
-export interface internalRole {
+export interface InternalRole {
   readonly type: ResourceType;
   readonly roleProps?: iam.RoleProps;
   readonly roleArn?: string;
 }
 
-interface Network {
-  vpcId: string;
-  subnetsId: string[];
-  existingSecurityGroupId?: string;
-  ingressSgRule?: ingressRule[];
-}
-interface parameters {
-  [key: string]: string;
+export interface Network {
+  readonly vpcId: string;
+  readonly subnetsId: string[];
+  readonly existingSecurityGroupId?: string;
+  readonly ingressSgRule?: IngressRule[];
 }
 
-interface ReadReplica {
-  replicas: number;
-  instanceType: ec2.InstanceType;
-  parameters?: parameters;
+export interface ReadReplica {
+  readonly replicas: number;
+  readonly instanceType: ec2.InstanceType;
+  readonly parameters?: Record<string, string>;
+  readonly alertThresholds?: AlertThresholds;
 }
 
 export interface PostgresProps {
-  publiclyAccessible?: boolean;
-  clusterName: string;
-  network: Network;
-  instanceType: ec2.InstanceType;
-  databaseName: string;
-  databaseMasterUserName: string;
-  postgresVersion: rds.IInstanceEngine;
-  multiAz?: boolean;
-  allocatedStorage?: number;
-  maxAllocatedStorage?: number;
-  storageType?: rds.StorageType;
-  backupRetention?: number;
-  deletionProtection?: boolean;
-  readReplicas?: ReadReplica;
-  parameters?: parameters;
-  enablePerformanceInsights?: boolean;
-  performanceInsightRetention?: rds.PerformanceInsightRetention;
-  monitoringInterval?: number;
-  alertSubcriptionWebhook?: string;
-  metricTopicName?: string;
-  snsTopicCreate?: boolean;
-  storageEncrypted?: boolean;
-  tags?: Record<string, string>;
+  readonly publiclyAccessible?: boolean;
+  readonly clusterName: string;
+  readonly network: Network;
+  readonly instanceType: ec2.InstanceType;
+  readonly databaseName: string;
+  readonly databaseMasterUserName: string;
+  readonly postgresVersion: rds.IInstanceEngine;
+  readonly multiAz?: boolean;
+  readonly allocatedStorage?: number;
+  readonly maxAllocatedStorage?: number;
+  readonly storageType?: rds.StorageType;
+  readonly backupRetention?: number;
+  readonly deletionProtection?: boolean;
+  readonly readReplicas?: ReadReplica;
+  readonly parameters?: Record<string, string>;
+  readonly enablePerformanceInsights?: boolean;
+  readonly performanceInsightRetention?: rds.PerformanceInsightRetention;
+  readonly monitoringInterval?: number;
+  readonly alertSubcriptionWebhooks?: string[]; // Array of webhook URLs for different integrations
+  readonly metricTopicName?: string;
+  readonly snsTopicCreate?: boolean;
+  readonly storageEncrypted?: boolean;
+  readonly tags?: Record<string, string>;
+  readonly enableAlerts?: boolean; // Flag to enable/disable all alerts (default: true)
+  // Custom alert thresholds
+  readonly primaryAlertThresholds?: AlertThresholds;
+  readonly replicaAlertThresholds?: AlertThresholds;
 }
 
 export class PostgresRDSCluster extends Construct {
@@ -154,20 +156,35 @@ export class PostgresRDSCluster extends Construct {
     tags.forEach((v, k) => {
       Tags.of(rdsInstance).add(k, v);
     });
-    if (props.alertSubcriptionWebhook) {
-      this.metricSnsTopic = new sns.Topic(this, `${props.clusterName}`, {
-        displayName: `clusrer rds ${props.clusterName} Alarm Topic`,
-        topicName: props.metricTopicName ?? `${props.clusterName}`,
-      });
-      this.metricSnsTopic.addSubscription(new sns_subs.UrlSubscription(Token.asString(props.alertSubcriptionWebhook), {
-        protocol: sns.SubscriptionProtocol.HTTPS,
-      }));
-    }
+
+    // Create monitoring nested stack
+    const monitoring = new RDSMonitoring(this, 'RDSMonitoringStack', {
+      clusterName: props.clusterName,
+      instanceType: props.instanceType,
+      backupRetention: props.backupRetention,
+      multiAz: props.multiAz,
+      readReplicas: props.readReplicas ? {
+        replicas: props.readReplicas.replicas,
+        instanceType: props.readReplicas.instanceType,
+        alertThresholds: props.readReplicas.alertThresholds,
+      } : undefined,
+      primaryAlertThresholds: props.primaryAlertThresholds,
+      replicaAlertThresholds: props.replicaAlertThresholds,
+      alertSubcriptionWebhooks: props.alertSubcriptionWebhooks,
+      metricTopicName: props.metricTopicName,
+      enableAlerts: props.enableAlerts,
+    });
+
+    // Store the SNS topic reference
+    this.metricSnsTopic = monitoring.metricSnsTopic;
+
+    // Create primary instance monitoring
+    monitoring.createPrimaryMonitoring(rdsInstance);
 
     if (props.readReplicas) {
       const readReplicaParameterGroup = props.readReplicas.parameters ? new rds.ParameterGroup(this, `${props.clusterName}ParameterGroupReadReplica`, {
         engine: props.postgresVersion,
-        parameters: props.parameters,
+        parameters: props.readReplicas.parameters,
       }): parameterGroup;
       for (let index = 0; index < props.readReplicas.replicas; index++) {
         let readReplics = new rds.DatabaseInstanceReadReplica(this, `${props.clusterName}-rreplicas-${index}`, {
@@ -177,220 +194,36 @@ export class PostgresRDSCluster extends Construct {
           enablePerformanceInsights: props.enablePerformanceInsights,
           performanceInsightRetention: props.performanceInsightRetention,
           monitoringRole: monitoringRole,
-          parameterGroup: readReplicaParameterGroup,
           securityGroups: [this.securityGroup],
           monitoringInterval: props.monitoringInterval ? Duration.seconds(props.monitoringInterval) : undefined,
           vpc,
+          parameterGroup: readReplicaParameterGroup,
         });
+
+        // Apply tags to read replica instances
         tags.forEach((v, k) => {
           Tags.of(readReplics).add(k, v);
         });
-        //CPU Metrics and Alert and Subscription for replica
-        let rdsCPUUtilizationMetricRead = readReplics.metricCPUUtilization({
-          period: Duration.minutes(5),
-        });
-        let rdsCPUUtilizationAlertRead = rdsCPUUtilizationMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-cpu-90-alert`, {
-          evaluationPeriods: 2,
-          alarmName: `${props.clusterName}-rreplicas-${index}-cpu-90`,
-          alarmDescription: 'Cluster cpu Over 90 Percent',
-          threshold: 90,
-        });
-        if (this.metricSnsTopic != undefined) {
-          rdsCPUUtilizationAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
 
-        //Free Storage Metrics and Alert and Subscription for replica
-        let rdsFreeStorageMetricRead = readReplics.metricFreeStorageSpace({
-          period: Duration.minutes(5),
-        });
-        let rdsInstanceFreeStorageAlertRead = rdsFreeStorageMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-freespace-10-alert`, {
-          evaluationPeriods: 2,
-          alarmName: `${props.clusterName}-rreplicas-${index}-freespace-10`,
-          alarmDescription: 'Cluster ReadReplica Storage Free Less than 10GB',
-          comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-          threshold: 10737418240,
-        });
-        if (this.metricSnsTopic != undefined) {
-          rdsInstanceFreeStorageAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
-
-        //Free Memory Metrics and Alert and Subscription for replica
-        let rdsFreeMemoryMetricRead = readReplics.metricFreeableMemory({
-          period: Duration.minutes(5),
-        });
-        let rdsFreeMemoryAlertRead = rdsFreeMemoryMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-memory-10-alert`, {
-          evaluationPeriods: 2,
-          alarmName: `${props.clusterName}-rreplicas-${index}-memory-10`,
-          comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-          alarmDescription: 'Cluster ReadReplica Memory Free Less than 2GB',
-          threshold: 2147483648,
-        });
-        if (this.metricSnsTopic != undefined) {
-          rdsFreeMemoryAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
-
-        // ReadIOPS Metrics and Alert for Read Replica
-        let rdsReadIOPSMetricRead = readReplics.metric('ReadIOPS', {
-          period: Duration.minutes(5),
-        });
-        let rdsReadIOPSAlertRead = rdsReadIOPSMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-readiops-1000-alert`, {
-          evaluationPeriods: 5,
-          alarmName: `${props.clusterName}-rreplicas-${index}-readiops-1000`,
-          comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-          alarmDescription: 'Cluster ReadReplica ReadIOPS Greater than 1000',
-          threshold: 1000,
-        });
-        if (this.metricSnsTopic != undefined) {
-          rdsReadIOPSAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
-
-        // WriteIOPS Metrics and Alert for Read Replica
-        let rdsWriteIOPSMetricRead = readReplics.metric('WriteIOPS', {
-          period: Duration.minutes(5),
-        });
-        let rdsWriteIOPSAlertRead = rdsWriteIOPSMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-writeiops-2000-alert`, {
-          evaluationPeriods: 5,
-          alarmName: `${props.clusterName}-rreplicas-${index}-writeiops-2000`,
-          comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-          alarmDescription: 'Cluster ReadReplica WriteIOPS Greater than 2000',
-          threshold: 2000,
-        });
-        if (this.metricSnsTopic != undefined) {
-          rdsWriteIOPSAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
-
-        // Disk Queue Depth Metrics and Alert for Read Replica
-        let rdsDiskQueueDepthMetricRead = readReplics.metric('DiskQueueDepth', {
-          period: Duration.minutes(5),
-        });
-        let rdsDiskQueueDepthAlertRead = rdsDiskQueueDepthMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-diskqueuedepth-5-alert`, {
-          evaluationPeriods: 5,
-          alarmName: `${props.clusterName}-rreplicas-${index}-diskqueuedepth-5`,
-          comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-          alarmDescription: 'Cluster ReadReplica Disk Queue Depth Greater than 5',
-          threshold: 5,
-        });
-        if (this.metricSnsTopic != undefined) {
-          rdsDiskQueueDepthAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
-
-        // Replica Lag Metrics and Alert and Subscription for replica
-        let replicaLagMetricRead = readReplics.metric('ReplicaLag', {
-          statistic: 'Average',
-          period: Duration.minutes(5),
-        });
-        let replicaLagAlertRead = replicaLagMetricRead.createAlarm(this, `${props.clusterName}-rreplicas-${index}-replicalag-30sec-alert`, {
-          evaluationPeriods: 2,
-          alarmName: `${props.clusterName}-rreplicas-${index}-replicalag-30sec`,
-          comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-          alarmDescription: 'Cluster ReplicaLag is greater than 30sec',
-          threshold: 30000,
-        });
-        if (this.metricSnsTopic != undefined) {
-          replicaLagAlertRead.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-        }
+        // Create replica monitoring
+        monitoring.createReplicaMonitoring(readReplics, index);
         this.readReplicas.push(readReplics);
       }
     }
 
-    //CPU Metrics and Alert and Subscription for primary
-    const rdsCPUUtilizationMetric = rdsInstance.metricCPUUtilization({
-      period: Duration.minutes(5),
-    });
-    const rdsCPUUtilizationAlert = rdsCPUUtilizationMetric.createAlarm(this, `${props.clusterName}-cpu-90-alert`, {
-      evaluationPeriods: 2,
-      alarmName: `${props.clusterName}-cpu-90`,
-      alarmDescription: 'Cluster cpu Over 90 Percent',
-      threshold: 90,
-    });
-    if (this.metricSnsTopic != undefined) {
-      rdsCPUUtilizationAlert.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
-
-    //Free Storage Metrics and Alert and Subscription for primary
-    const rdsFreeStorageMetric = rdsInstance.metricFreeStorageSpace({
-      period: Duration.minutes(5),
-    });
-    const rdsInstanceFreeStorageAlert = rdsFreeStorageMetric.createAlarm(this, `${props.clusterName}-freespace-10-alert`, {
-      evaluationPeriods: 2,
-      alarmName: `${props.clusterName}-freespace-10`,
-      alarmDescription: 'Cluster Storage Free Less than 10GB',
-      comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-      threshold: 10737418240,
-    });
-    if (this.metricSnsTopic != undefined) {
-      rdsInstanceFreeStorageAlert.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
-
-    //Free Memory Metrics and Alert and Subscription for primary
-    const rdsFreeMemoryMetric = rdsInstance.metricFreeableMemory({
-      period: Duration.minutes(5),
-    });
-    const rdsFreeMemoryAlert = rdsFreeMemoryMetric.createAlarm(this, `${props.clusterName}-memory-10-alert`, {
-      evaluationPeriods: 2,
-      alarmName: `${props.clusterName}-memory-10`,
-      comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-      alarmDescription: 'Cluster Memory Free Less than 2GB',
-      threshold: 2147483648,
-    });
-    if (this.metricSnsTopic != undefined) {
-      rdsFreeMemoryAlert.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
-    // Volume Read IOPS Metrics and Alert for primary
-    const ReadIOPSMetric = rdsInstance.metric('ReadIOPS', {
-      statistic: 'Average',
-      period: Duration.minutes(5),
-    });
-    const ReadIOPSAlert = ReadIOPSMetric.createAlarm(this, `${props.clusterName}-read-iops-1000-alert`, {
-      evaluationPeriods: 2,
-      alarmName: `${props.clusterName}-read-iops-1000`,
-      alarmDescription: 'Db Instance Read IOPS exceeds 1000',
-      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-      threshold: 1000,
-    });
-    if (this.metricSnsTopic != undefined) {
-      ReadIOPSAlert.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
-
-    // Volume Write IOPS Metrics and Alert for primary
-    const WriteIOPSMetric = rdsInstance.metric('WriteIOPS', {
-      statistic: 'Average',
-      period: Duration.minutes(5),
-    });
-    const WriteIOPSAlert = WriteIOPSMetric.createAlarm(this, `${props.clusterName}-write-iops-2000-alert`, {
-      evaluationPeriods: 2,
-      alarmName: `${props.clusterName}-write-iops-2000`,
-      alarmDescription: 'Db Instance Write IOPS exceeds 2000',
-      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-      threshold: 2000,
-    });
-    if (this.metricSnsTopic != undefined) {
-      WriteIOPSAlert.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
-
-    // Disk Queue Depth Metrics and Alert for primary
-    const diskQueueDepthMetric = rdsInstance.metric('DiskQueueDepth', {
-      statistic: 'Average',
-      period: Duration.minutes(5),
-    });
-    const diskQueueDepthAlert = diskQueueDepthMetric.createAlarm(this, `${props.clusterName}-disk-queue-depth-5-alert`, {
-      evaluationPeriods: 5,
-      alarmName: `${props.clusterName}-disk-queue-depth-5`,
-      alarmDescription: 'Cluster Disk Queue Depth exceeds 5',
-      comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
-      threshold: 5,
-    });
-    if (this.metricSnsTopic != undefined) {
-      diskQueueDepthAlert.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
-
-    new CfnOutput(this, `${props.clusterName}dbEndpoint`, {
+    new CfnOutput(this, `${props.clusterName}Endpoint`, {
       value: rdsInstance.instanceEndpoint.hostname,
+      description: 'RDS Instance Endpoint',
     });
 
-    new CfnOutput(this, `${props.clusterName}SecretName`, {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
-      value: rdsInstance.secret?.secretName!,
+    new CfnOutput(this, `${props.clusterName}Port`, {
+      value: rdsInstance.instanceEndpoint.port.toString(),
+      description: 'RDS Instance Port',
+    });
+
+    new CfnOutput(this, `${props.clusterName}SecurityGroupId`, {
+      value: this.securityGroup.securityGroupId,
+      description: 'RDS Security Group ID',
     });
   }
 }
