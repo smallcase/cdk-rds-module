@@ -66,6 +66,7 @@ export interface PostgresProps {
   // Custom alert thresholds
   readonly primaryAlertThresholds?: AlertThresholds;
   readonly replicaAlertThresholds?: AlertThresholds;
+  readonly snapshotIdentifier?: string;
 }
 
 export class PostgresRDSCluster extends Construct {
@@ -123,36 +124,42 @@ export class PostgresRDSCluster extends Construct {
       engine: props.postgresVersion,
       parameters: props.parameters,
     });
-    const rdsInstance = new rds.DatabaseInstance(this, `${props.clusterName}Cluster`,
-      {
-        vpc,
-        subnetGroup: dbSubnetGroup,
-        engine: props.postgresVersion,
-        instanceIdentifier: props.clusterName,
-        instanceType: props.instanceType,
-        securityGroups: [this.securityGroup],
-        credentials: rds.Credentials.fromGeneratedSecret(props.databaseMasterUserName),
-        multiAz: props.multiAz,
-        allocatedStorage: props.allocatedStorage,
-        maxAllocatedStorage: props.maxAllocatedStorage,
-        storageType: props.storageType ? props.storageType : rds.StorageType.GP2,
-        enablePerformanceInsights: props.enablePerformanceInsights,
-        performanceInsightRetention: props.performanceInsightRetention,
-        allowMajorVersionUpgrade: false,
-        autoMinorVersionUpgrade: false,
-        parameterGroup: parameterGroup,
-        backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : Duration.days(0),
-        deleteAutomatedBackups: true,
-        monitoringRole: monitoringRole,
-        monitoringInterval: props.monitoringInterval ? Duration.seconds(props.monitoringInterval) : undefined,
-        removalPolicy: RemovalPolicy.SNAPSHOT,
-        deletionProtection: props.deletionProtection,
-        databaseName: props.databaseName,
-        publiclyAccessible: props.publiclyAccessible,
-        cloudwatchLogsExports: ['postgresql'],
-        storageEncrypted: props.storageEncrypted ?? false,
-        copyTagsToSnapshot: true,
-      });
+    const commonInstanceProps = {
+      instanceIdentifier: props.clusterName,
+      instanceType: props.instanceType,
+      vpc,
+      subnetGroup: dbSubnetGroup,
+      securityGroups: [this.securityGroup],
+      parameterGroup: parameterGroup,
+      publiclyAccessible: props.publiclyAccessible,
+      multiAz: props.multiAz,
+      monitoringRole: monitoringRole,
+      monitoringInterval: props.monitoringInterval ? Duration.seconds(props.monitoringInterval) : undefined,
+      enablePerformanceInsights: props.enablePerformanceInsights,
+      performanceInsightRetention: props.performanceInsightRetention,
+      deleteAutomatedBackups: true,
+      removalPolicy: RemovalPolicy.SNAPSHOT,
+      deletionProtection: props.deletionProtection,
+      cloudwatchLogsExports: ['postgresql'],
+      copyTagsToSnapshot: true,
+      allocatedStorage: props.allocatedStorage,
+      maxAllocatedStorage: props.maxAllocatedStorage,
+    };
+    const rdsInstance = props.snapshotIdentifier ? new rds.DatabaseInstanceFromSnapshot(this, `${props.clusterName}Cluster`, {
+      ...commonInstanceProps,
+      engine: props.postgresVersion,
+      credentials: rds.SnapshotCredentials.fromGeneratedSecret(props.databaseMasterUserName),
+      snapshotIdentifier: props.snapshotIdentifier,
+    }): new rds.DatabaseInstance(this, `${props.clusterName}Cluster`, {
+      ...commonInstanceProps,
+      engine: props.postgresVersion,
+      credentials: rds.Credentials.fromGeneratedSecret(props.databaseMasterUserName),
+      allowMajorVersionUpgrade: false,
+      autoMinorVersionUpgrade: true,
+      backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : Duration.days(0),
+      storageEncrypted: props.storageEncrypted ?? false,
+      databaseName: props.databaseName,
+    });
     tags.forEach((v, k) => {
       Tags.of(rdsInstance).add(k, v);
     });
