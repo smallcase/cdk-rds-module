@@ -24,7 +24,7 @@ export class SlackChatbotIntegration extends Construct {
       throw new Error('Slack Workspace ID must start with "T". Refer to Slack to obtain it.');
     }
 
-    this.chatbotRole = new iam.Role(this, 'ChatbotRole', {
+    this.chatbotRole = new iam.Role(this, `${this.node.id}-ChatbotRole`, {
       assumedBy: new iam.ServicePrincipal('chatbot.amazonaws.com'),
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchReadOnlyAccess'),
@@ -47,7 +47,7 @@ export class SlackChatbotIntegration extends Construct {
       },
     });
 
-    this.slackChannel = new chatbot.SlackChannelConfiguration(this, 'SlackChannelConfig', {
+    this.slackChannel = new chatbot.SlackChannelConfiguration(this, `${this.node.id}-SlackChannelConfig`, {
       slackWorkspaceId: props.slackWorkspaceId,
       slackChannelId: props.slackChannelId,
       slackChannelConfigurationName: `${props.environmentName}-tracking-rds-alerts`,
@@ -55,7 +55,7 @@ export class SlackChatbotIntegration extends Construct {
       notificationTopics: props.notificationTopics,
     });
 
-    new CfnOutput(this, 'SlackChatbotOutput', {
+    new CfnOutput(this, `${this.node.id}-SlackChatbotOutput`, {
       value: JSON.stringify({
         workspaceId: props.slackWorkspaceId,
         channelId: props.slackChannelId,
