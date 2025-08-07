@@ -162,7 +162,7 @@ export class PostgresRDSCluster extends Construct {
       engine: props.postgresVersion,
       credentials: rds.Credentials.fromGeneratedSecret(props.databaseMasterUserName),
       backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : Duration.days(0),
-      storageEncrypted: props.storageEncrypted ?? false,
+      storageEncrypted: props.storageEncrypted ?? true,
       databaseName: props.databaseName,
     });
     tags.forEach((v, k) => {
@@ -202,8 +202,8 @@ export class PostgresRDSCluster extends Construct {
         let readReplics = new rds.DatabaseInstanceReadReplica(this, `${props.clusterName}-rreplicas-${index}`, {
           sourceDatabaseInstance: rdsInstance,
           subnetGroup: dbSubnetGroup,
-          deletionProtection: props.deletionProtection,
-          storageEncrypted: props.storageEncrypted,
+          deletionProtection: props.deletionProtection ?? true,
+          storageEncrypted: props.storageEncrypted ?? true,
           storageType: props.storageType,
           autoMinorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
           allocatedStorage: props.replicaAllocatedStorage ?? props.allocatedStorage,
