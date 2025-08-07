@@ -7,7 +7,7 @@ import {
 import { Construct } from 'constructs';
 
 export interface SlackChatbotProps {
-  readonly environmentName: string;
+  readonly slackChannelConfigurationName: string;
   readonly slackWorkspaceId: string;
   readonly slackChannelId: string;
   readonly notificationTopics: sns.ITopic[];
@@ -50,7 +50,7 @@ export class SlackChatbotIntegration extends Construct {
     this.slackChannel = new chatbot.SlackChannelConfiguration(this, `${this.node.id}-SlackChannelConfig`, {
       slackWorkspaceId: props.slackWorkspaceId,
       slackChannelId: props.slackChannelId,
-      slackChannelConfigurationName: `${props.environmentName}-tracking-rds-alerts`,
+      slackChannelConfigurationName: props.slackChannelConfigurationName,
       role: this.chatbotRole,
       notificationTopics: props.notificationTopics,
     });

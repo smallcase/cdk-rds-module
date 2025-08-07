@@ -49,6 +49,8 @@ export interface PostgresProps {
   readonly multiAz?: boolean;
   readonly allocatedStorage?: number;
   readonly maxAllocatedStorage?: number;
+  readonly replicaAllocatedStorage?: number;
+  readonly replicaMaxAllocatedStorage?: number;
   readonly storageType?: rds.StorageType;
   readonly backupRetention?: number;
   readonly deletionProtection?: boolean;
@@ -61,6 +63,8 @@ export interface PostgresProps {
   readonly metricTopicName?: string;
   readonly snsTopicCreate?: boolean;
   readonly storageEncrypted?: boolean;
+  readonly allowMajorVersionUpgrade?: boolean;
+  readonly autoMinorVersionUpgrade?: boolean;
   readonly tags?: Record<string, string>;
   readonly enableAlerts?: boolean; // Flag to enable/disable all alerts (default: true)
   // Custom alert thresholds
@@ -139,11 +143,14 @@ export class PostgresRDSCluster extends Construct {
       performanceInsightRetention: props.performanceInsightRetention,
       deleteAutomatedBackups: true,
       removalPolicy: RemovalPolicy.SNAPSHOT,
-      deletionProtection: props.deletionProtection,
+      deletionProtection: props.deletionProtection ?? true,
       cloudwatchLogsExports: ['postgresql'],
       copyTagsToSnapshot: true,
       allocatedStorage: props.allocatedStorage,
       maxAllocatedStorage: props.maxAllocatedStorage,
+      StorageType: props.storageType,
+      allowMajorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
+      autoMinorVersionUpgrade: props.autoMinorVersionUpgrade ?? false,
     };
     const rdsInstance = props.snapshotIdentifier ? new rds.DatabaseInstanceFromSnapshot(this, `${props.clusterName}Cluster`, {
       ...commonInstanceProps,
@@ -154,10 +161,8 @@ export class PostgresRDSCluster extends Construct {
       ...commonInstanceProps,
       engine: props.postgresVersion,
       credentials: rds.Credentials.fromGeneratedSecret(props.databaseMasterUserName),
-      allowMajorVersionUpgrade: false,
-      autoMinorVersionUpgrade: true,
       backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : Duration.days(0),
-      storageEncrypted: props.storageEncrypted ?? false,
+      storageEncrypted: props.storageEncrypted ?? true,
       databaseName: props.databaseName,
     });
     tags.forEach((v, k) => {
@@ -196,6 +201,13 @@ export class PostgresRDSCluster extends Construct {
       for (let index = 0; index < props.readReplicas.replicas; index++) {
         let readReplics = new rds.DatabaseInstanceReadReplica(this, `${props.clusterName}-rreplicas-${index}`, {
           sourceDatabaseInstance: rdsInstance,
+          subnetGroup: dbSubnetGroup,
+          deletionProtection: props.deletionProtection ?? true,
+          storageEncrypted: props.storageEncrypted ?? true,
+          storageType: props.storageType,
+          autoMinorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
+          allocatedStorage: props.replicaAllocatedStorage ?? props.allocatedStorage,
+          maxAllocatedStorage: props.replicaMaxAllocatedStorage ?? props.maxAllocatedStorage,
           instanceIdentifier: `${props.clusterName}-rreplicas-${index}`,
           instanceType: props.readReplicas.instanceType,
           enablePerformanceInsights: props.enablePerformanceInsights,
