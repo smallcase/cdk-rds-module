@@ -5,6 +5,8 @@ import {
 import { Construct } from 'constructs';
 import { AlertThresholds, RDSMonitoring } from './monitoring';
 import { ObjToStrMap } from './utils/common';
+import { StorageType } from 'aws-cdk-lib/aws-rds';
+import { DeletionProtectionCheck } from 'aws-cdk-lib/aws-appconfig';
 
 export enum ResourceType {
   NEW,
@@ -49,6 +51,8 @@ export interface PostgresProps {
   readonly multiAz?: boolean;
   readonly allocatedStorage?: number;
   readonly maxAllocatedStorage?: number;
+  readonly replicaAllocatedStorage?: number
+  readonly replicaMaxAllocatedStorage?: number
   readonly storageType?: rds.StorageType;
   readonly backupRetention?: number;
   readonly deletionProtection?: boolean;
@@ -61,6 +65,9 @@ export interface PostgresProps {
   readonly metricTopicName?: string;
   readonly snsTopicCreate?: boolean;
   readonly storageEncrypted?: boolean;
+  readonly allowMajorVersionUpgrade?: boolean;
+  readonly autoMinorVersionUpgrade?: boolean;
+  readonly dbIOPS?: number;
   readonly tags?: Record<string, string>;
   readonly enableAlerts?: boolean; // Flag to enable/disable all alerts (default: true)
   // Custom alert thresholds
@@ -139,11 +146,15 @@ export class PostgresRDSCluster extends Construct {
       performanceInsightRetention: props.performanceInsightRetention,
       deleteAutomatedBackups: true,
       removalPolicy: RemovalPolicy.SNAPSHOT,
-      deletionProtection: props.deletionProtection,
+      deletionProtection: props.deletionProtection ?? true,
       cloudwatchLogsExports: ['postgresql'],
       copyTagsToSnapshot: true,
       allocatedStorage: props.allocatedStorage,
       maxAllocatedStorage: props.maxAllocatedStorage,
+      StorageType: props.storageType,
+      allowMajorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
+      autoMinorVersionUpgrade: props.autoMinorVersionUpgrade ?? false,
+      iops: props.dbIOPS,
     };
     const rdsInstance = props.snapshotIdentifier ? new rds.DatabaseInstanceFromSnapshot(this, `${props.clusterName}Cluster`, {
       ...commonInstanceProps,
@@ -154,8 +165,6 @@ export class PostgresRDSCluster extends Construct {
       ...commonInstanceProps,
       engine: props.postgresVersion,
       credentials: rds.Credentials.fromGeneratedSecret(props.databaseMasterUserName),
-      allowMajorVersionUpgrade: false,
-      autoMinorVersionUpgrade: true,
       backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : Duration.days(0),
       storageEncrypted: props.storageEncrypted ?? false,
       databaseName: props.databaseName,
@@ -196,6 +205,13 @@ export class PostgresRDSCluster extends Construct {
       for (let index = 0; index < props.readReplicas.replicas; index++) {
         let readReplics = new rds.DatabaseInstanceReadReplica(this, `${props.clusterName}-rreplicas-${index}`, {
           sourceDatabaseInstance: rdsInstance,
+          subnetGroup: dbSubnetGroup,
+          deletionProtection: props.deletionProtection,
+          storageEncrypted: props.storageEncrypted,
+          storageType: props.storageType,
+          autoMinorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
+          allocatedStorage: props.replicaAllocatedStorage ?? props.allocatedStorage,
+          maxAllocatedStorage: props.replicaMaxAllocatedStorage ?? props.maxAllocatedStorage,
           instanceIdentifier: `${props.clusterName}-rreplicas-${index}`,
           instanceType: props.readReplicas.instanceType,
           enablePerformanceInsights: props.enablePerformanceInsights,
