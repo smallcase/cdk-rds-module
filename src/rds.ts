@@ -49,8 +49,8 @@ export interface PostgresProps {
   readonly multiAz?: boolean;
   readonly allocatedStorage?: number;
   readonly maxAllocatedStorage?: number;
-  readonly replicaAllocatedStorage?: number
-  readonly replicaMaxAllocatedStorage?: number
+  readonly replicaAllocatedStorage?: number;
+  readonly replicaMaxAllocatedStorage?: number;
   readonly storageType?: rds.StorageType;
   readonly backupRetention?: number;
   readonly deletionProtection?: boolean;
@@ -65,7 +65,6 @@ export interface PostgresProps {
   readonly storageEncrypted?: boolean;
   readonly allowMajorVersionUpgrade?: boolean;
   readonly autoMinorVersionUpgrade?: boolean;
-  readonly dbIOPS?: number;
   readonly tags?: Record<string, string>;
   readonly enableAlerts?: boolean; // Flag to enable/disable all alerts (default: true)
   // Custom alert thresholds
@@ -152,7 +151,6 @@ export class PostgresRDSCluster extends Construct {
       StorageType: props.storageType,
       allowMajorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
       autoMinorVersionUpgrade: props.autoMinorVersionUpgrade ?? false,
-      iops: props.dbIOPS,
     };
     const rdsInstance = props.snapshotIdentifier ? new rds.DatabaseInstanceFromSnapshot(this, `${props.clusterName}Cluster`, {
       ...commonInstanceProps,

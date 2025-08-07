@@ -840,6 +840,8 @@ const postgresProps: PostgresProps = { ... }
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.postgresVersion">postgresVersion</a></code> | <code>aws-cdk-lib.aws_rds.IInstanceEngine</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.alertSubcriptionWebhooks">alertSubcriptionWebhooks</a></code> | <code>string[]</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.allocatedStorage">allocatedStorage</a></code> | <code>number</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.allowMajorVersionUpgrade">allowMajorVersionUpgrade</a></code> | <code>boolean</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.autoMinorVersionUpgrade">autoMinorVersionUpgrade</a></code> | <code>boolean</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.backupRetention">backupRetention</a></code> | <code>number</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.deletionProtection">deletionProtection</a></code> | <code>boolean</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.enableAlerts">enableAlerts</a></code> | <code>boolean</code> | *No description.* |
@@ -854,6 +856,8 @@ const postgresProps: PostgresProps = { ... }
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.publiclyAccessible">publiclyAccessible</a></code> | <code>boolean</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.readReplicas">readReplicas</a></code> | <code><a href="#@smallcase/cdk-rds-module.ReadReplica">ReadReplica</a></code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaAlertThresholds">replicaAlertThresholds</a></code> | <code><a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a></code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaAllocatedStorage">replicaAllocatedStorage</a></code> | <code>number</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaMaxAllocatedStorage">replicaMaxAllocatedStorage</a></code> | <code>number</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.snapshotIdentifier">snapshotIdentifier</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.snsTopicCreate">snsTopicCreate</a></code> | <code>boolean</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.storageEncrypted">storageEncrypted</a></code> | <code>boolean</code> | *No description.* |
@@ -939,6 +943,26 @@ public readonly allocatedStorage: number;
 ```
 
 - *Type:* number
+
+---
+
+##### `allowMajorVersionUpgrade`<sup>Optional</sup> <a name="allowMajorVersionUpgrade" id="@smallcase/cdk-rds-module.PostgresProps.property.allowMajorVersionUpgrade"></a>
+
+```typescript
+public readonly allowMajorVersionUpgrade: boolean;
+```
+
+- *Type:* boolean
+
+---
+
+##### `autoMinorVersionUpgrade`<sup>Optional</sup> <a name="autoMinorVersionUpgrade" id="@smallcase/cdk-rds-module.PostgresProps.property.autoMinorVersionUpgrade"></a>
+
+```typescript
+public readonly autoMinorVersionUpgrade: boolean;
+```
+
+- *Type:* boolean
 
 ---
 
@@ -1079,6 +1103,26 @@ public readonly replicaAlertThresholds: AlertThresholds;
 ```
 
 - *Type:* <a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a>
+
+---
+
+##### `replicaAllocatedStorage`<sup>Optional</sup> <a name="replicaAllocatedStorage" id="@smallcase/cdk-rds-module.PostgresProps.property.replicaAllocatedStorage"></a>
+
+```typescript
+public readonly replicaAllocatedStorage: number;
+```
+
+- *Type:* number
+
+---
+
+##### `replicaMaxAllocatedStorage`<sup>Optional</sup> <a name="replicaMaxAllocatedStorage" id="@smallcase/cdk-rds-module.PostgresProps.property.replicaMaxAllocatedStorage"></a>
+
+```typescript
+public readonly replicaMaxAllocatedStorage: number;
+```
+
+- *Type:* number
 
 ---
 
@@ -1257,20 +1301,10 @@ const slackChatbotProps: SlackChatbotProps = { ... }
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#@smallcase/cdk-rds-module.SlackChatbotProps.property.environmentName">environmentName</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.SlackChatbotProps.property.notificationTopics">notificationTopics</a></code> | <code>aws-cdk-lib.aws_sns.ITopic[]</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.SlackChatbotProps.property.slackChannelConfigurationName">slackChannelConfigurationName</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.SlackChatbotProps.property.slackChannelId">slackChannelId</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.SlackChatbotProps.property.slackWorkspaceId">slackWorkspaceId</a></code> | <code>string</code> | *No description.* |
-
----
-
-##### `environmentName`<sup>Required</sup> <a name="environmentName" id="@smallcase/cdk-rds-module.SlackChatbotProps.property.environmentName"></a>
-
-```typescript
-public readonly environmentName: string;
-```
-
-- *Type:* string
 
 ---
 
@@ -1281,6 +1315,16 @@ public readonly notificationTopics: ITopic[];
 ```
 
 - *Type:* aws-cdk-lib.aws_sns.ITopic[]
+
+---
+
+##### `slackChannelConfigurationName`<sup>Required</sup> <a name="slackChannelConfigurationName" id="@smallcase/cdk-rds-module.SlackChatbotProps.property.slackChannelConfigurationName"></a>
+
+```typescript
+public readonly slackChannelConfigurationName: string;
+```
+
+- *Type:* string
 
 ---
 
