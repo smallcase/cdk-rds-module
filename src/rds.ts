@@ -5,8 +5,6 @@ import {
 import { Construct } from 'constructs';
 import { AlertThresholds, RDSMonitoring } from './monitoring';
 import { ObjToStrMap } from './utils/common';
-import { StorageType } from 'aws-cdk-lib/aws-rds';
-import { DeletionProtectionCheck } from 'aws-cdk-lib/aws-appconfig';
 
 export enum ResourceType {
   NEW,
