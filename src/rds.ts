@@ -148,7 +148,7 @@ export class PostgresRDSCluster extends Construct {
       copyTagsToSnapshot: true,
       allocatedStorage: props.allocatedStorage,
       maxAllocatedStorage: props.maxAllocatedStorage,
-      StorageType: props.storageType,
+      storageType: props.storageType,
       allowMajorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
       autoMinorVersionUpgrade: props.autoMinorVersionUpgrade ?? false,
     };
@@ -203,7 +203,6 @@ export class PostgresRDSCluster extends Construct {
           sourceDatabaseInstance: rdsInstance,
           subnetGroup: dbSubnetGroup,
           deletionProtection: props.deletionProtection ?? true,
-          storageEncrypted: props.storageEncrypted ?? true,
           storageType: props.storageType,
           autoMinorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
           allocatedStorage: props.replicaAllocatedStorage ?? props.allocatedStorage,
@@ -246,3 +245,5 @@ export class PostgresRDSCluster extends Construct {
     });
   }
 }
+
+
