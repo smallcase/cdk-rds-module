@@ -858,6 +858,7 @@ const postgresProps: PostgresProps = { ... }
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaAlertThresholds">replicaAlertThresholds</a></code> | <code><a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a></code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaAllocatedStorage">replicaAllocatedStorage</a></code> | <code>number</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaMaxAllocatedStorage">replicaMaxAllocatedStorage</a></code> | <code>number</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaStorageType">replicaStorageType</a></code> | <code>aws-cdk-lib.aws_rds.StorageType</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.snapshotIdentifier">snapshotIdentifier</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.snsTopicCreate">snsTopicCreate</a></code> | <code>boolean</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.storageEncrypted">storageEncrypted</a></code> | <code>boolean</code> | *No description.* |
@@ -1123,6 +1124,16 @@ public readonly replicaMaxAllocatedStorage: number;
 ```
 
 - *Type:* number
+
+---
+
+##### `replicaStorageType`<sup>Optional</sup> <a name="replicaStorageType" id="@smallcase/cdk-rds-module.PostgresProps.property.replicaStorageType"></a>
+
+```typescript
+public readonly replicaStorageType: StorageType;
+```
+
+- *Type:* aws-cdk-lib.aws_rds.StorageType
 
 ---
 
