@@ -52,6 +52,7 @@ export interface PostgresProps {
   readonly replicaAllocatedStorage?: number;
   readonly replicaMaxAllocatedStorage?: number;
   readonly storageType?: rds.StorageType;
+  readonly replicaStorageType?: rds.StorageType;
   readonly backupRetention?: number;
   readonly deletionProtection?: boolean;
   readonly readReplicas?: ReadReplica;
@@ -203,7 +204,7 @@ export class PostgresRDSCluster extends Construct {
           sourceDatabaseInstance: rdsInstance,
           subnetGroup: dbSubnetGroup,
           deletionProtection: props.deletionProtection ?? true,
-          storageType: props.storageType,
+          storageType: props.replicaStorageType,
           autoMinorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
           allocatedStorage: props.replicaAllocatedStorage ?? props.allocatedStorage,
           maxAllocatedStorage: props.replicaMaxAllocatedStorage ?? props.maxAllocatedStorage,
