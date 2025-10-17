@@ -205,7 +205,7 @@ export class PostgresRDSCluster extends Construct {
           subnetGroup: dbSubnetGroup,
           deletionProtection: props.deletionProtection ?? true,
           storageType: props.replicaStorageType,
-          autoMinorVersionUpgrade: props.allowMajorVersionUpgrade ?? false,
+          autoMinorVersionUpgrade: props.autoMinorVersionUpgrade ?? false,
           allocatedStorage: props.replicaAllocatedStorage ?? props.allocatedStorage,
           maxAllocatedStorage: props.replicaMaxAllocatedStorage ?? props.maxAllocatedStorage,
           instanceIdentifier: `${props.clusterName}-rreplicas-${index}`,
