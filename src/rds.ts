@@ -158,6 +158,8 @@ export class PostgresRDSCluster extends Construct {
       engine: props.postgresVersion,
       credentials: rds.SnapshotCredentials.fromGeneratedSecret(props.databaseMasterUserName),
       snapshotIdentifier: props.snapshotIdentifier,
+      // Leave unset when not given so existing snapshot-restored instances keep their current retention.
+      backupRetention: props.backupRetention ? Duration.days(props.backupRetention) : undefined,
     }): new rds.DatabaseInstance(this, `${props.clusterName}Cluster`, {
       ...commonInstanceProps,
       engine: props.postgresVersion,
