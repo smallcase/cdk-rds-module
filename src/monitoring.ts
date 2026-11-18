@@ -7,7 +7,7 @@ import {
   Token,
   NestedStack,
 } from 'aws-cdk-lib';
-import { ComparisonOperator } from 'aws-cdk-lib/aws-cloudwatch';
+import { Alarm, ComparisonOperator } from 'aws-cdk-lib/aws-cloudwatch';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 
@@ -22,6 +22,38 @@ export interface AlertThresholds {
   readonly freeStorage?: number; // in bytes
   readonly networkThroughput?: number; // in bytes per second
   readonly replicationLag?: number; // in milliseconds
+}
+
+/**
+ * Thresholds for the extra critical-tier alarms created when `severityAlerts` is set.
+ */
+export interface CriticalAlertThresholds {
+  /** Free storage in bytes at or below which the critical alarm fires. Default: 5 GiB. */
+  readonly freeStorage?: number;
+  /** Freeable memory in bytes at or below which the critical alarm fires. Default: 256 MiB. */
+  readonly memory?: number;
+  /** Replica lag in milliseconds above which the critical alarm fires (replicas only). Default: 300000 (5 min). */
+  readonly replicationLag?: number;
+  /** Connection count above which the critical alarm fires. No alarm unless set. */
+  readonly dbConnections?: number;
+}
+
+/**
+ * Opt-in routing of alarms to separate warning and critical SNS topics.
+ *
+ * When set, the module creates two topics. The existing alarms send to the warning topic, and extra
+ * critical-tier alarms (free storage, memory, replica lag, and connections when configured) send to
+ * the critical topic. Both alarm and OK (recovery) notifications are sent. If `alertSubcriptionWebhooks`
+ * is also set, the existing single topic is still created and still receives every existing alarm,
+ * exactly as before.
+ */
+export interface SeverityAlertsConfig {
+  /** Default: `<clusterName>-warning`. */
+  readonly warningTopicName?: string;
+  /** Default: `<clusterName>-critical`. */
+  readonly criticalTopicName?: string;
+  readonly primaryCriticalThresholds?: CriticalAlertThresholds;
+  readonly replicaCriticalThresholds?: CriticalAlertThresholds;
 }
 
 export interface ReadReplicaConfig {
@@ -41,10 +73,15 @@ export interface MonitoringConfig {
   readonly alertSubcriptionWebhooks?: string[]; // Array of webhook URLs for different integrations
   readonly metricTopicName?: string;
   readonly enableAlerts?: boolean; // Flag to enable/disable all alerts (default: true)
+  readonly severityAlerts?: SeverityAlertsConfig;
 }
+
+type Severity = 'warning' | 'critical';
 
 export class RDSMonitoring extends Construct {
   public metricSnsTopic?: sns.ITopic;
+  public warningSnsTopic?: sns.ITopic;
+  public criticalSnsTopic?: sns.ITopic;
   private config: MonitoringConfig;
   private nestedStack: NestedStack;
 
@@ -68,6 +105,105 @@ export class RDSMonitoring extends Construct {
           protocol: sns.SubscriptionProtocol.HTTPS,
         }));
       });
+    }
+
+    // Opt-in severity topics (no effect on existing stacks unless severityAlerts is set)
+    if (config.enableAlerts !== false && config.severityAlerts) {
+      const warningTopicName = config.severityAlerts.warningTopicName ?? `${config.clusterName}-warning`;
+      const criticalTopicName = config.severityAlerts.criticalTopicName ?? `${config.clusterName}-critical`;
+      this.warningSnsTopic = new sns.Topic(this.nestedStack, `${config.clusterName}-warning-topic`, {
+        displayName: `rds ${config.clusterName} warning alarms`,
+        topicName: warningTopicName,
+      });
+      this.criticalSnsTopic = new sns.Topic(this.nestedStack, `${config.clusterName}-critical-topic`, {
+        displayName: `rds ${config.clusterName} critical alarms`,
+        topicName: criticalTopicName,
+      });
+    }
+  }
+
+  /**
+   * Wire an alarm to its notification targets.
+   * Legacy single topic: alarm action only, unchanged from earlier versions.
+   * Severity topics: alarm + OK action on the topic for the alarm's severity.
+   */
+  private addActions(alarm: Alarm, severity: Severity) {
+    if (severity === 'warning' && this.metricSnsTopic) {
+      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
+    }
+    const topic = severity === 'critical' ? this.criticalSnsTopic : this.warningSnsTopic;
+    if (topic) {
+      alarm.addAlarmAction(new cw_actions.SnsAction(topic));
+      alarm.addOkAction(new cw_actions.SnsAction(topic));
+    }
+  }
+
+  /**
+   * Extra critical-tier alarms. Only created when severityAlerts is set.
+   */
+  private createCriticalAlerts(
+    instance: rds.DatabaseInstance | rds.DatabaseInstanceReadReplica,
+    isReplica: boolean,
+    replicaIndex?: number,
+  ) {
+    if (!this.criticalSnsTopic) {
+      return;
+    }
+    const custom = isReplica ?
+      this.config.severityAlerts!.replicaCriticalThresholds :
+      this.config.severityAlerts!.primaryCriticalThresholds;
+    const t = {
+      freeStorage: 5368709120, // 5 GiB
+      memory: 268435456, // 256 MiB
+      replicationLag: 300000, // 5 min
+      ...custom,
+    };
+    const suffix = isReplica ? `-rreplicas-${replicaIndex}` : '';
+    const prefix = `${this.config.clusterName}${suffix}`;
+    const who = isReplica ? 'ReadReplica ' : '';
+
+    const storageGB = Math.round((t.freeStorage / 1073741824) * 10) / 10;
+    this.addActions(instance.metricFreeStorageSpace({ period: Duration.minutes(5) }).createAlarm(
+      this.nestedStack, `${prefix}-critical-freespace-alert`, {
+        evaluationPeriods: 2,
+        alarmName: `${prefix}-critical-freespace-${storageGB}gb`,
+        alarmDescription: `CRITICAL: ${who}free storage at or below ${storageGB}GB (${this.config.clusterName})`,
+        comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+        threshold: t.freeStorage,
+      }), 'critical');
+
+    const memoryMB = Math.round(t.memory / 1048576);
+    this.addActions(instance.metricFreeableMemory({ period: Duration.minutes(5) }).createAlarm(
+      this.nestedStack, `${prefix}-critical-memory-alert`, {
+        evaluationPeriods: 3,
+        alarmName: `${prefix}-critical-memory-${memoryMB}mb`,
+        alarmDescription: `CRITICAL: ${who}freeable memory at or below ${memoryMB}MB (${this.config.clusterName})`,
+        comparisonOperator: ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+        threshold: t.memory,
+      }), 'critical');
+
+    if (isReplica) {
+      const lagSec = Math.round(t.replicationLag / 1000);
+      this.addActions(instance.metric('ReplicaLag', { statistic: 'Average', period: Duration.minutes(5) }).createAlarm(
+        this.nestedStack, `${prefix}-critical-replication-lag-alert`, {
+          evaluationPeriods: 2,
+          alarmName: `${prefix}-critical-replication-lag-${lagSec}sec`,
+          alarmDescription: `CRITICAL: ReadReplica lag above ${lagSec} seconds (${this.config.clusterName})`,
+          comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+          // ReplicaLag is reported in seconds
+          threshold: lagSec,
+        }), 'critical');
+    }
+
+    if (t.dbConnections !== undefined) {
+      this.addActions(instance.metric('DatabaseConnections', { statistic: 'Average', period: Duration.minutes(5) }).createAlarm(
+        this.nestedStack, `${prefix}-critical-db-connections-alert`, {
+          evaluationPeriods: 2,
+          alarmName: `${prefix}-critical-db-connections-${t.dbConnections}`,
+          alarmDescription: `CRITICAL: ${who}database connections above ${t.dbConnections} (${this.config.clusterName})`,
+          comparisonOperator: ComparisonOperator.GREATER_THAN_THRESHOLD,
+          threshold: t.dbConnections,
+        }), 'critical');
     }
   }
 
@@ -99,6 +235,8 @@ export class RDSMonitoring extends Construct {
     if (this.config.backupRetention && this.config.backupRetention > 0) {
       this.createBackupStorageAlert(primaryInstance, thresholds, false);
     }
+
+    this.createCriticalAlerts(primaryInstance, false);
   }
 
   /**
@@ -124,6 +262,8 @@ export class RDSMonitoring extends Construct {
     this.createDatabaseConnectionsAlert(replicaInstance, replicaThresholds, true, replicaIndex);
     this.createNetworkThroughputAlert(replicaInstance, replicaThresholds, true, replicaIndex);
     this.createReplicationLagAlert(replicaInstance, replicaThresholds, true, replicaIndex);
+
+    this.createCriticalAlerts(replicaInstance, true, replicaIndex);
   }
 
   /**
@@ -265,9 +405,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.cpu,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createFreeStorageAlert(
@@ -294,9 +432,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.freeStorage,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createFreeMemoryAlert(
@@ -323,9 +459,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.memory,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createReadIOPSAlert(
@@ -352,9 +486,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.readIops,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createWriteIOPSAlert(
@@ -381,9 +513,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.writeIops,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createDiskQueueDepthAlert(
@@ -410,9 +540,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.diskQueueDepth,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createDatabaseConnectionsAlert(
@@ -439,9 +567,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.dbConnections,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createNetworkThroughputAlert(
@@ -469,9 +595,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.networkThroughput,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createReplicationLagAlert(
@@ -499,9 +623,7 @@ export class RDSMonitoring extends Construct {
       threshold: thresholds.replicationLag,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 
   private createBackupStorageAlert(
@@ -535,8 +657,6 @@ export class RDSMonitoring extends Construct {
       threshold: backupThreshold,
     });
 
-    if (this.metricSnsTopic) {
-      alarm.addAlarmAction(new cw_actions.SnsAction(this.metricSnsTopic));
-    }
+    this.addActions(alarm, 'warning');
   }
 }

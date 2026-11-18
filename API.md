@@ -87,7 +87,9 @@ Any object.
 | <code><a href="#@smallcase/cdk-rds-module.PostgresRDSCluster.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresRDSCluster.property.readReplicas">readReplicas</a></code> | <code>aws-cdk-lib.aws_rds.DatabaseInstanceReadReplica[]</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresRDSCluster.property.securityGroup">securityGroup</a></code> | <code>aws-cdk-lib.aws_ec2.ISecurityGroup</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresRDSCluster.property.criticalSnsTopic">criticalSnsTopic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresRDSCluster.property.metricSnsTopic">metricSnsTopic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresRDSCluster.property.warningSnsTopic">warningSnsTopic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | *No description.* |
 
 ---
 
@@ -123,10 +125,30 @@ public readonly securityGroup: ISecurityGroup;
 
 ---
 
+##### `criticalSnsTopic`<sup>Optional</sup> <a name="criticalSnsTopic" id="@smallcase/cdk-rds-module.PostgresRDSCluster.property.criticalSnsTopic"></a>
+
+```typescript
+public readonly criticalSnsTopic: ITopic;
+```
+
+- *Type:* aws-cdk-lib.aws_sns.ITopic
+
+---
+
 ##### `metricSnsTopic`<sup>Optional</sup> <a name="metricSnsTopic" id="@smallcase/cdk-rds-module.PostgresRDSCluster.property.metricSnsTopic"></a>
 
 ```typescript
 public readonly metricSnsTopic: ITopic;
+```
+
+- *Type:* aws-cdk-lib.aws_sns.ITopic
+
+---
+
+##### `warningSnsTopic`<sup>Optional</sup> <a name="warningSnsTopic" id="@smallcase/cdk-rds-module.PostgresRDSCluster.property.warningSnsTopic"></a>
+
+```typescript
+public readonly warningSnsTopic: ITopic;
 ```
 
 - *Type:* aws-cdk-lib.aws_sns.ITopic
@@ -253,7 +275,9 @@ Any object.
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
 | <code><a href="#@smallcase/cdk-rds-module.RDSMonitoring.property.node">node</a></code> | <code>constructs.Node</code> | The tree node. |
+| <code><a href="#@smallcase/cdk-rds-module.RDSMonitoring.property.criticalSnsTopic">criticalSnsTopic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.RDSMonitoring.property.metricSnsTopic">metricSnsTopic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.RDSMonitoring.property.warningSnsTopic">warningSnsTopic</a></code> | <code>aws-cdk-lib.aws_sns.ITopic</code> | *No description.* |
 
 ---
 
@@ -269,10 +293,30 @@ The tree node.
 
 ---
 
+##### `criticalSnsTopic`<sup>Optional</sup> <a name="criticalSnsTopic" id="@smallcase/cdk-rds-module.RDSMonitoring.property.criticalSnsTopic"></a>
+
+```typescript
+public readonly criticalSnsTopic: ITopic;
+```
+
+- *Type:* aws-cdk-lib.aws_sns.ITopic
+
+---
+
 ##### `metricSnsTopic`<sup>Optional</sup> <a name="metricSnsTopic" id="@smallcase/cdk-rds-module.RDSMonitoring.property.metricSnsTopic"></a>
 
 ```typescript
 public readonly metricSnsTopic: ITopic;
+```
+
+- *Type:* aws-cdk-lib.aws_sns.ITopic
+
+---
+
+##### `warningSnsTopic`<sup>Optional</sup> <a name="warningSnsTopic" id="@smallcase/cdk-rds-module.RDSMonitoring.property.warningSnsTopic"></a>
+
+```typescript
+public readonly warningSnsTopic: ITopic;
 ```
 
 - *Type:* aws-cdk-lib.aws_sns.ITopic
@@ -519,6 +563,85 @@ public readonly writeIops: number;
 
 ---
 
+### CriticalAlertThresholds <a name="CriticalAlertThresholds" id="@smallcase/cdk-rds-module.CriticalAlertThresholds"></a>
+
+Thresholds for the extra critical-tier alarms created when `severityAlerts` is set.
+
+#### Initializer <a name="Initializer" id="@smallcase/cdk-rds-module.CriticalAlertThresholds.Initializer"></a>
+
+```typescript
+import { CriticalAlertThresholds } from '@smallcase/cdk-rds-module'
+
+const criticalAlertThresholds: CriticalAlertThresholds = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds.property.dbConnections">dbConnections</a></code> | <code>number</code> | Connection count above which the critical alarm fires. |
+| <code><a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds.property.freeStorage">freeStorage</a></code> | <code>number</code> | Free storage in bytes at or below which the critical alarm fires. |
+| <code><a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds.property.memory">memory</a></code> | <code>number</code> | Freeable memory in bytes at or below which the critical alarm fires. |
+| <code><a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds.property.replicationLag">replicationLag</a></code> | <code>number</code> | Replica lag in milliseconds above which the critical alarm fires (replicas only). |
+
+---
+
+##### `dbConnections`<sup>Optional</sup> <a name="dbConnections" id="@smallcase/cdk-rds-module.CriticalAlertThresholds.property.dbConnections"></a>
+
+```typescript
+public readonly dbConnections: number;
+```
+
+- *Type:* number
+
+Connection count above which the critical alarm fires.
+
+No alarm unless set.
+
+---
+
+##### `freeStorage`<sup>Optional</sup> <a name="freeStorage" id="@smallcase/cdk-rds-module.CriticalAlertThresholds.property.freeStorage"></a>
+
+```typescript
+public readonly freeStorage: number;
+```
+
+- *Type:* number
+
+Free storage in bytes at or below which the critical alarm fires.
+
+Default: 5 GiB.
+
+---
+
+##### `memory`<sup>Optional</sup> <a name="memory" id="@smallcase/cdk-rds-module.CriticalAlertThresholds.property.memory"></a>
+
+```typescript
+public readonly memory: number;
+```
+
+- *Type:* number
+
+Freeable memory in bytes at or below which the critical alarm fires.
+
+Default: 256 MiB.
+
+---
+
+##### `replicationLag`<sup>Optional</sup> <a name="replicationLag" id="@smallcase/cdk-rds-module.CriticalAlertThresholds.property.replicationLag"></a>
+
+```typescript
+public readonly replicationLag: number;
+```
+
+- *Type:* number
+
+Replica lag in milliseconds above which the critical alarm fires (replicas only).
+
+Default: 300000 (5 min).
+
+---
+
 ### IngressRule <a name="IngressRule" id="@smallcase/cdk-rds-module.IngressRule"></a>
 
 #### Initializer <a name="Initializer" id="@smallcase/cdk-rds-module.IngressRule.Initializer"></a>
@@ -654,6 +777,7 @@ const monitoringConfig: MonitoringConfig = { ... }
 | <code><a href="#@smallcase/cdk-rds-module.MonitoringConfig.property.primaryAlertThresholds">primaryAlertThresholds</a></code> | <code><a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a></code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.MonitoringConfig.property.readReplicas">readReplicas</a></code> | <code><a href="#@smallcase/cdk-rds-module.ReadReplicaConfig">ReadReplicaConfig</a></code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.MonitoringConfig.property.replicaAlertThresholds">replicaAlertThresholds</a></code> | <code><a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a></code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.MonitoringConfig.property.severityAlerts">severityAlerts</a></code> | <code><a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig">SeverityAlertsConfig</a></code> | *No description.* |
 
 ---
 
@@ -754,6 +878,16 @@ public readonly replicaAlertThresholds: AlertThresholds;
 ```
 
 - *Type:* <a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a>
+
+---
+
+##### `severityAlerts`<sup>Optional</sup> <a name="severityAlerts" id="@smallcase/cdk-rds-module.MonitoringConfig.property.severityAlerts"></a>
+
+```typescript
+public readonly severityAlerts: SeverityAlertsConfig;
+```
+
+- *Type:* <a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig">SeverityAlertsConfig</a>
 
 ---
 
@@ -859,6 +993,7 @@ const postgresProps: PostgresProps = { ... }
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaAllocatedStorage">replicaAllocatedStorage</a></code> | <code>number</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaMaxAllocatedStorage">replicaMaxAllocatedStorage</a></code> | <code>number</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.replicaStorageType">replicaStorageType</a></code> | <code>aws-cdk-lib.aws_rds.StorageType</code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.severityAlerts">severityAlerts</a></code> | <code><a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig">SeverityAlertsConfig</a></code> | Opt-in: route alarms to separate warning and critical SNS topics and add critical-tier alarms. |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.snapshotIdentifier">snapshotIdentifier</a></code> | <code>string</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.snsTopicCreate">snsTopicCreate</a></code> | <code>boolean</code> | *No description.* |
 | <code><a href="#@smallcase/cdk-rds-module.PostgresProps.property.storageEncrypted">storageEncrypted</a></code> | <code>boolean</code> | *No description.* |
@@ -1137,6 +1272,20 @@ public readonly replicaStorageType: StorageType;
 
 ---
 
+##### `severityAlerts`<sup>Optional</sup> <a name="severityAlerts" id="@smallcase/cdk-rds-module.PostgresProps.property.severityAlerts"></a>
+
+```typescript
+public readonly severityAlerts: SeverityAlertsConfig;
+```
+
+- *Type:* <a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig">SeverityAlertsConfig</a>
+
+Opt-in: route alarms to separate warning and critical SNS topics and add critical-tier alarms.
+
+Leaving this unset keeps the synthesized template identical to earlier versions.
+
+---
+
 ##### `snapshotIdentifier`<sup>Optional</sup> <a name="snapshotIdentifier" id="@smallcase/cdk-rds-module.PostgresProps.property.snapshotIdentifier"></a>
 
 ```typescript
@@ -1295,6 +1444,79 @@ public readonly alertThresholds: AlertThresholds;
 ```
 
 - *Type:* <a href="#@smallcase/cdk-rds-module.AlertThresholds">AlertThresholds</a>
+
+---
+
+### SeverityAlertsConfig <a name="SeverityAlertsConfig" id="@smallcase/cdk-rds-module.SeverityAlertsConfig"></a>
+
+Opt-in routing of alarms to separate warning and critical SNS topics.
+
+When set, the module creates two topics. The existing alarms send to the warning topic, and extra
+critical-tier alarms (free storage, memory, replica lag, and connections when configured) send to
+the critical topic. Both alarm and OK (recovery) notifications are sent. If `alertSubcriptionWebhooks`
+is also set, the existing single topic is still created and still receives every existing alarm,
+exactly as before.
+
+#### Initializer <a name="Initializer" id="@smallcase/cdk-rds-module.SeverityAlertsConfig.Initializer"></a>
+
+```typescript
+import { SeverityAlertsConfig } from '@smallcase/cdk-rds-module'
+
+const severityAlertsConfig: SeverityAlertsConfig = { ... }
+```
+
+#### Properties <a name="Properties" id="Properties"></a>
+
+| **Name** | **Type** | **Description** |
+| --- | --- | --- |
+| <code><a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig.property.criticalTopicName">criticalTopicName</a></code> | <code>string</code> | Default: `<clusterName>-critical`. |
+| <code><a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig.property.primaryCriticalThresholds">primaryCriticalThresholds</a></code> | <code><a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds">CriticalAlertThresholds</a></code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig.property.replicaCriticalThresholds">replicaCriticalThresholds</a></code> | <code><a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds">CriticalAlertThresholds</a></code> | *No description.* |
+| <code><a href="#@smallcase/cdk-rds-module.SeverityAlertsConfig.property.warningTopicName">warningTopicName</a></code> | <code>string</code> | Default: `<clusterName>-warning`. |
+
+---
+
+##### `criticalTopicName`<sup>Optional</sup> <a name="criticalTopicName" id="@smallcase/cdk-rds-module.SeverityAlertsConfig.property.criticalTopicName"></a>
+
+```typescript
+public readonly criticalTopicName: string;
+```
+
+- *Type:* string
+
+Default: `<clusterName>-critical`.
+
+---
+
+##### `primaryCriticalThresholds`<sup>Optional</sup> <a name="primaryCriticalThresholds" id="@smallcase/cdk-rds-module.SeverityAlertsConfig.property.primaryCriticalThresholds"></a>
+
+```typescript
+public readonly primaryCriticalThresholds: CriticalAlertThresholds;
+```
+
+- *Type:* <a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds">CriticalAlertThresholds</a>
+
+---
+
+##### `replicaCriticalThresholds`<sup>Optional</sup> <a name="replicaCriticalThresholds" id="@smallcase/cdk-rds-module.SeverityAlertsConfig.property.replicaCriticalThresholds"></a>
+
+```typescript
+public readonly replicaCriticalThresholds: CriticalAlertThresholds;
+```
+
+- *Type:* <a href="#@smallcase/cdk-rds-module.CriticalAlertThresholds">CriticalAlertThresholds</a>
+
+---
+
+##### `warningTopicName`<sup>Optional</sup> <a name="warningTopicName" id="@smallcase/cdk-rds-module.SeverityAlertsConfig.property.warningTopicName"></a>
+
+```typescript
+public readonly warningTopicName: string;
+```
+
+- *Type:* string
+
+Default: `<clusterName>-warning`.
 
 ---
 

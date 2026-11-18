@@ -3,7 +3,7 @@ import {
   Tags, aws_rds as rds, Duration, RemovalPolicy, CfnOutput,
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { AlertThresholds, RDSMonitoring } from './monitoring';
+import { AlertThresholds, RDSMonitoring, SeverityAlertsConfig } from './monitoring';
 import { ObjToStrMap } from './utils/common';
 
 export enum ResourceType {
@@ -72,11 +72,18 @@ export interface PostgresProps {
   readonly primaryAlertThresholds?: AlertThresholds;
   readonly replicaAlertThresholds?: AlertThresholds;
   readonly snapshotIdentifier?: string;
+  /**
+   * Opt-in: route alarms to separate warning and critical SNS topics and add critical-tier alarms.
+   * Leaving this unset keeps the synthesized template identical to earlier versions.
+   */
+  readonly severityAlerts?: SeverityAlertsConfig;
 }
 
 export class PostgresRDSCluster extends Construct {
   securityGroup: ec2.ISecurityGroup;
   metricSnsTopic?: sns.ITopic;
+  warningSnsTopic?: sns.ITopic;
+  criticalSnsTopic?: sns.ITopic;
   readReplicas: rds.DatabaseInstanceReadReplica[] = [];
   constructor(scope: Construct, id: string, props: PostgresProps) {
     super(scope, id);
@@ -188,10 +195,13 @@ export class PostgresRDSCluster extends Construct {
       alertSubcriptionWebhooks: props.alertSubcriptionWebhooks,
       metricTopicName: props.metricTopicName,
       enableAlerts: props.enableAlerts,
+      severityAlerts: props.severityAlerts,
     });
 
     // Store the SNS topic reference
     this.metricSnsTopic = monitoring.metricSnsTopic;
+    this.warningSnsTopic = monitoring.warningSnsTopic;
+    this.criticalSnsTopic = monitoring.criticalSnsTopic;
 
     // Create primary instance monitoring
     monitoring.createPrimaryMonitoring(rdsInstance);
