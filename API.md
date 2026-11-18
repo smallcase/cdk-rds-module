@@ -624,7 +624,7 @@ public readonly memory: number;
 
 Freeable memory in bytes at or below which the critical alarm fires.
 
-Default: 256 MiB.
+Default: 500 MiB.
 
 ---
 

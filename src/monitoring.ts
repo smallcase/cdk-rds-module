@@ -30,7 +30,7 @@ export interface AlertThresholds {
 export interface CriticalAlertThresholds {
   /** Free storage in bytes at or below which the critical alarm fires. Default: 5 GiB. */
   readonly freeStorage?: number;
-  /** Freeable memory in bytes at or below which the critical alarm fires. Default: 256 MiB. */
+  /** Freeable memory in bytes at or below which the critical alarm fires. Default: 500 MiB. */
   readonly memory?: number;
   /** Replica lag in milliseconds above which the critical alarm fires (replicas only). Default: 300000 (5 min). */
   readonly replicationLag?: number;
@@ -154,7 +154,7 @@ export class RDSMonitoring extends Construct {
       this.config.severityAlerts!.primaryCriticalThresholds;
     const t = {
       freeStorage: 5368709120, // 5 GiB
-      memory: 268435456, // 256 MiB
+      memory: 524288000, // 500 MiB
       replicationLag: 300000, // 5 min
       ...custom,
     };
